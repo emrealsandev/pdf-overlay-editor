@@ -12,6 +12,15 @@ const thumbnailList = document.getElementById('thumbnail-list');
 const pageIndicatorLabel = document.getElementById('page-indicator');
 const themeToggleButton = document.getElementById('theme-toggle');
 const viewerMain = document.getElementById('viewer-main');
+const zoomOutButton = document.getElementById('zoom-out-btn');
+const zoomInButton = document.getElementById('zoom-in-btn');
+const zoomLevelLabel = document.getElementById('zoom-level-label');
+
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.1;
+let zoomLevel = 1;
+let zoomRenderToken = 0;
 
 const createCursorStyle = (svgMarkup, hotSpotX, hotSpotY, fallback = 'crosshair') =>
   `url("data:image/svg+xml,${encodeURIComponent(svgMarkup)}") ${hotSpotX} ${hotSpotY}, ${fallback}`;
@@ -91,10 +100,15 @@ let totalPageCount = 0;
 let activePageNumber = 1;
 let scrollRafId = null;
 let lastInteractedCanvas = null;
+let currentPdfDocument = null;
 const pdfjsLibInstance = pdfjsLib;
 const THEME_STORAGE_KEY = 'pdf-overlay-theme';
 
 const showStatus = (message, isError = false) => {
+  if (!statusBanner) {
+    console[isError ? 'error' : 'log'](message);
+    return;
+  }
   statusBanner.textContent = message;
   statusBanner.hidden = false;
   statusBanner.style.background = isError
@@ -104,6 +118,7 @@ const showStatus = (message, isError = false) => {
 };
 
 const hideStatus = () => {
+  if (!statusBanner) return;
   statusBanner.hidden = true;
 };
 
@@ -120,8 +135,79 @@ const updateStrokeLabel = () => {
 };
 
 const updatePageIndicator = () => {
+  if (!pageIndicatorLabel) return;
   const safeCurrent = Math.min(activePageNumber, totalPageCount || 0);
   pageIndicatorLabel.textContent = `Page ${Math.max(safeCurrent, 0)} / ${totalPageCount || 0}`;
+};
+
+const clampZoom = (value) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(value) || 1));
+
+const updateZoomLabel = () => {
+  if (!zoomLevelLabel) return;
+  zoomLevelLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+};
+
+const rerenderPageForZoom = async (entry, token) => {
+  if (!currentPdfDocument || token !== zoomRenderToken) return;
+
+  const page = await currentPdfDocument.getPage(entry.pageNumber);
+  const viewport = page.getViewport({ scale: entry.baseScale * zoomLevel });
+
+  const { pdfCanvas, fabricCanvas } = entry;
+  pdfCanvas.width = viewport.width;
+  pdfCanvas.height = viewport.height;
+
+  const context = pdfCanvas.getContext('2d');
+  await page.render({ canvasContext: context, viewport }).promise;
+
+  fabricCanvas.setDimensions({ width: viewport.width, height: viewport.height });
+  fabricCanvas.setViewportTransform([zoomLevel, 0, 0, zoomLevel, 0, 0]);
+  fabricCanvas.requestRenderAll();
+
+  page.cleanup();
+};
+
+const applyZoom = async () => {
+  if (!fabricEntries.length || !currentPdfDocument) {
+    updateZoomLabel();
+    return;
+  }
+
+  const token = ++zoomRenderToken;
+  showStatus(`Applying zoom (${Math.round(zoomLevel * 100)}%)…`);
+
+  for (const entry of fabricEntries) {
+    if (token !== zoomRenderToken) return;
+    await rerenderPageForZoom(entry, token);
+  }
+
+  if (token !== zoomRenderToken) return;
+  hideStatus();
+  updateActivePageFromScroll();
+  updateZoomLabel();
+};
+
+const setZoom = async (nextZoom) => {
+  const clamped = clampZoom(nextZoom);
+  if (Math.abs(clamped - zoomLevel) < 0.001) return;
+  zoomLevel = clamped;
+  await applyZoom();
+};
+
+const initZoomControls = () => {
+  updateZoomLabel();
+
+  if (zoomOutButton) {
+    zoomOutButton.addEventListener('click', () => {
+      void setZoom(zoomLevel - ZOOM_STEP);
+    });
+  }
+
+  if (zoomInButton) {
+    zoomInButton.addEventListener('click', () => {
+      void setZoom(zoomLevel + ZOOM_STEP);
+    });
+  }
 };
 
 const setActivePageNumber = (pageNumber) => {
@@ -332,6 +418,36 @@ const ensureLibrariesLoaded = () => {
 
   if (!window.jspdf?.jsPDF) {
     throw new Error('jsPDF failed to load.');
+  }
+
+  const canvas2DProto = window.CanvasRenderingContext2D?.prototype;
+  const baselineDescriptor = canvas2DProto
+    ? Object.getOwnPropertyDescriptor(canvas2DProto, 'textBaseline')
+    : null;
+
+  if (
+    canvas2DProto
+    && baselineDescriptor?.configurable
+    && baselineDescriptor.get
+    && baselineDescriptor.set
+    && !canvas2DProto.__pdfOverlayBaselinePatchApplied
+  ) {
+    Object.defineProperty(canvas2DProto, 'textBaseline', {
+      configurable: true,
+      enumerable: baselineDescriptor.enumerable,
+      get: baselineDescriptor.get,
+      set(value) {
+        const normalized = value === 'alphabetical' ? 'alphabetic' : value;
+        baselineDescriptor.set.call(this, normalized);
+      }
+    });
+
+    Object.defineProperty(canvas2DProto, '__pdfOverlayBaselinePatchApplied', {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: true
+    });
   }
 };
 
@@ -654,6 +770,7 @@ const renderDocument = async (url) => {
   try {
     const loadingTask = pdfjsLibInstance.getDocument({ url, withCredentials: false });
     const pdf = await loadingTask.promise;
+    currentPdfDocument = pdf;
     totalPageCount = pdf.numPages;
     updatePageIndicator();
     hideStatus();
@@ -672,8 +789,9 @@ const renderPage = async (pdfDocument, pageNumber) => {
   const page = await pdfDocument.getPage(pageNumber);
   const targetWidth = Math.min(pdfContainer.clientWidth || window.innerWidth || 900, 1100);
   const unscaledViewport = page.getViewport({ scale: 1 });
-  const scale = Math.max(targetWidth / unscaledViewport.width, 1);
-  const viewport = page.getViewport({ scale });
+  const fitScale = targetWidth / unscaledViewport.width;
+  const scale = Math.min(Math.max(fitScale, 0.85), 1.25);
+  const viewport = page.getViewport({ scale: scale * zoomLevel });
 
   const wrapper = document.createElement('article');
   wrapper.className = 'page-wrapper';
@@ -705,12 +823,13 @@ const renderPage = async (pdfDocument, pageNumber) => {
     preserveObjectStacking: true
   });
 
+  fabricCanvas.setViewportTransform([zoomLevel, 0, 0, zoomLevel, 0, 0]);
   fabricCanvas.setBackgroundColor('rgba(0,0,0,0)', fabricCanvas.requestRenderAll.bind(fabricCanvas));
   updateCanvasInteraction(fabricCanvas);
   attachCanvasHandlers(fabricCanvas);
   registerHistoryListeners(fabricCanvas);
 
-  fabricEntries.push({ pageNumber, pdfCanvas, fabricCanvas, wrapper });
+  fabricEntries.push({ pageNumber, pdfCanvas, fabricCanvas, wrapper, baseScale: scale });
   await createThumbnailEntry(page, pageNumber);
   page.cleanup();
   if (pageNumber === 1) {
@@ -791,6 +910,7 @@ const loadImage = (src) =>
 const bootstrap = async () => {
   initToolbar();
   initThemeToggle();
+  initZoomControls();
   initKeyboardShortcuts();
   bindScrollTracking();
 

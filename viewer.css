@@ -8,6 +8,10 @@
   --text-muted: #a7b0c0;
   --border: rgba(255, 255, 255, 0.08);
   --panel-bg: rgba(28, 31, 38, 0.65);
+  --toolbar-bg: rgba(15, 17, 21, 0.92);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.3);
+  --border-radius-md: 0.375rem;
 }
 
 body[data-theme='light'] {
@@ -166,6 +170,9 @@ body[data-theme='light'] #toolbar {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   padding-right: 0.25rem;
 }
 
@@ -198,6 +205,11 @@ body[data-theme='light'] #toolbar {
 .thumbnail-item[aria-current='page'] {
   border-color: var(--accent);
   transform: translateX(4px);
+}
+
+.thumbnail-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(91, 192, 190, 0.35);
 }
 
 #download-btn {
@@ -315,13 +327,13 @@ body[data-theme='light'] #toolbar {
   flex-direction: column;
   gap: 1.5rem;
   align-items: center;
-  overflow-y: auto;
+  overflow: auto;
   padding-bottom: 2rem;
 }
 
 .page-wrapper {
   position: relative;
-  width: min(900px, 100%);
+  width: fit-content;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: 1rem;
@@ -331,11 +343,10 @@ body[data-theme='light'] #toolbar {
 
 .page-stage {
   position: relative;
-  width: 100%;
+  display: inline-block;
 }
 
 .page-stage .page-canvas {
-  width: 100%;
   height: auto;
   border-radius: 0.5rem;
   display: block;
@@ -369,6 +380,26 @@ body[data-theme='light'] #toolbar {
 
 .page-stage .canvas-container .lower-canvas {
   border-radius: 0.5rem;
+}
+
+#zoom-controls-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--toolbar-bg);
+  padding: 8px;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+}
+
+#zoom-controls-container .toolbar-label {
+  min-width: 50px;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
