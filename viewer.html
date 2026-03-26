@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Overlay Editor</title>
+    <link rel="stylesheet" href="viewer.css" />
+  </head>
+  <body data-theme="dark">
+    <div id="toolbar" role="toolbar" aria-label="PDF editing toolbar">
+      <div class="toolbar-left tool-group">
+        <button class="tool-button active" data-tool="select" aria-label="Select tool">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M5 3l9 9H9l3 9-2.5.8-3-9H3z" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+        <button class="tool-button" data-tool="pencil" aria-label="Pencil tool">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z" fill="currentColor" />
+              <path d="M20.71 7.04a1 1 0 000-1.41L18.37 3.3a1 1 0 00-1.41 0l-1.34 1.34 3.75 3.75 1.34-1.35z" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+        <button class="tool-button" data-tool="rectangle" aria-label="Rectangle tool">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <rect x="4" y="6" width="16" height="12" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </span>
+        </button>
+        <button class="tool-button" data-tool="arrow" aria-label="Arrow tool">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M5 12h10l-3.5-3.5L13 7l6 5-6 5-1.5-1.5L15 13H5z" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+        <button class="tool-button" data-tool="text" aria-label="Text tool">
+          <span class="icon icon-text" aria-hidden="true">T</span>
+        </button>
+        <button class="tool-button" data-tool="eraser" aria-label="Eraser tool">
+          <span class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation">
+              <path d="M16 3l5 5-9 9H7l-4-4 9-10z" fill="currentColor" />
+              <path d="M7 17h13v2H7z" fill="currentColor" />
+            </svg>
+          </span>
+        </button>
+      </div>
+      <div class="toolbar-center">
+        <span id="page-indicator">Page 0 / 0</span>
+      </div>
+      <div class="toolbar-right tool-group">
+        <div class="inline-control color-control">
+          <span>Color</span>
+          <button id="color-swatch" type="button" aria-label="Choose color"></button>
+          <input type="color" id="color-picker" value="#ff5252" aria-label="Color picker" />
+        </div>
+        <div class="inline-control stroke-control">
+          <span>Stroke</span>
+          <input type="range" id="stroke-width" min="1" max="20" value="2" />
+          <span id="stroke-value">2 px</span>
+        </div>
+        <button id="theme-toggle" type="button" aria-label="Toggle theme">🌙</button>
+        <button id="download-btn">Save</button>
+      </div>
+    </div>
+
+    <main id="viewer-shell">
+      <aside id="thumbnail-panel" aria-label="Page thumbnails">
+        <header>Pages</header>
+        <div id="thumbnail-list"></div>
+      </aside>
+      <section id="viewer-main">
+        <div id="status-banner" hidden></div>
+        <section id="pdf-container" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <script src="libs/fabric.min.js"></script>
+    <script src="libs/jspdf.umd.min.js"></script>
+    <script type="module" src="viewer.js"></script>
+  </body>
+</html>

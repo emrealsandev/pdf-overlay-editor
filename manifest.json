@@ -1,0 +1,48 @@
+{
+    "manifest_version": 3,
+    "name": "PDF Overlay Editor",
+    "version": "1.0.0",
+    "description": "Render PDFs with PDF.js and annotate them with Fabric.js overlays directly in the browser.",
+    "permissions": [
+        "scripting",
+        "activeTab",
+        "storage",
+        "webNavigation",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "action": {
+        "default_title": "PDF Overlay Editor"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "http://*/*",
+                "https://*/*"
+            ],
+            "js": [
+                "content_script.js"
+            ],
+            "run_at": "document_start"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "viewer.html",
+                "viewer.js",
+                "viewer.css",
+                "libs/*.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}
