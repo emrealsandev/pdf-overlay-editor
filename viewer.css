@@ -98,6 +98,29 @@ body[data-theme='light'] #toolbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.tool-shortcut {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0f1115;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  border: 1px solid rgba(15, 17, 21, 0.25);
+  pointer-events: none;
+}
+
+body[data-theme='light'] .tool-shortcut {
+  color: #ffffff;
 }
 
 .tool-button .icon {

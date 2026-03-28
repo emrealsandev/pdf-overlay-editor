@@ -22,6 +22,15 @@ const ZOOM_STEP = 0.1;
 let zoomLevel = 1;
 let zoomRenderToken = 0;
 
+const TOOL_SHORTCUTS = {
+  '1': 'select',
+  '2': 'pencil',
+  '3': 'rectangle',
+  '4': 'arrow',
+  '5': 'text',
+  '6': 'eraser'
+};
+
 const createCursorStyle = (svgMarkup, hotSpotX, hotSpotY, fallback = 'crosshair') =>
   `url("data:image/svg+xml,${encodeURIComponent(svgMarkup)}") ${hotSpotX} ${hotSpotY}, ${fallback}`;
 
@@ -329,6 +338,15 @@ const initKeyboardShortcuts = () => {
   document.addEventListener('keydown', (event) => {
     if (event.target && (['INPUT', 'TEXTAREA'].includes(event.target.tagName) || event.target.isContentEditable)) {
       return;
+    }
+
+    if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+      const shortcutTool = TOOL_SHORTCUTS[event.key];
+      if (shortcutTool) {
+        event.preventDefault();
+        setActiveTool(shortcutTool);
+        return;
+      }
     }
 
     if ((event.key === 'Delete' || event.key === 'Backspace') && deleteSelectedObjects()) {
